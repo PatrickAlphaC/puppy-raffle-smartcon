@@ -5,6 +5,7 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {Base64} from "lib/base64/base64.sol";
+import {console} from "lib/forge-std/src/console.sol";
 
 /// @title PuppyRaffle
 /// @author PuppyLoveDAO
@@ -51,6 +52,7 @@ contract PuppyRaffle is ERC721, Ownable {
 
     // Events
     event RaffleEnter(address[] newPlayers);
+    event RaffleWinner(address winner);
     event RaffleRefunded(address player);
     event FeeAddressChanged(address newFeeAddress);
 
@@ -124,11 +126,36 @@ contract PuppyRaffle is ERC721, Ownable {
     /// @dev we send 80% of the funds to the winner, the other 20% goes to the feeAddress
     function selectWinner() external {
         require(block.timestamp >= raffleStartTime + raffleDuration, "PuppyRaffle: Raffle not over");
-        require(players.length >= 4, "PuppyRaffle: Need at least 4 players");
+
+        // count non zero addresses
+        uint256 nonZero;
+
+        for (uint256 i = 0; i < players.length; i++) {
+            if (players[i] != address(0)) {
+                nonZero++;
+            }
+        }
+
+        // go through the players array to eliminate the zero addresses
+        // in case someone takes a refund
+        address[] memory tmp = new address[](nonZero);
+        uint256 j;
+        for (uint256 i = 0; i < players.length; i++) {
+            if (players[i] != address(0)) {
+                tmp[j] = players[i];
+                j++; 
+            }
+        }
+
+
+
+        // address[] memory tmp = players;
+
+        require(tmp.length >= 4, "PuppyRaffle: Need at least 4 players");
         uint256 winnerIndex =
-            uint256(keccak256(abi.encodePacked(msg.sender, block.timestamp, block.difficulty))) % players.length;
-        address winner = players[winnerIndex];
-        uint256 totalAmountCollected = players.length * entranceFee;
+            uint256(keccak256(abi.encodePacked(msg.sender, block.timestamp, block.difficulty))) % tmp.length;
+        address winner = tmp[winnerIndex];
+        uint256 totalAmountCollected = tmp.length * entranceFee;
         uint256 prizePool = (totalAmountCollected * 80) / 100;
         uint256 fee = (totalAmountCollected * 20) / 100;
         totalFees = totalFees + uint64(fee);
@@ -148,6 +175,9 @@ contract PuppyRaffle is ERC721, Ownable {
         delete players;
         raffleStartTime = block.timestamp;
         previousWinner = winner;
+
+        emit RaffleWinner(winner);
+
         (bool success,) = winner.call{value: prizePool}("");
         require(success, "PuppyRaffle: Failed to send prize pool to winner");
         _safeMint(winner, tokenId);
