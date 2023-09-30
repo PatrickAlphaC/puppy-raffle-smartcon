@@ -33,6 +33,13 @@ contract PuppyRaffleTest is Test {
         puppyRaffle.enterRaffle{value: entranceFee}(players);
         assertEq(puppyRaffle.players(0), playerOne);
     }
+    
+    function testIfZeroCanEnterRaffle() public {
+        address[] memory players = new address[](1);
+        players[0] = address(0);
+        puppyRaffle.enterRaffle{value: entranceFee}(players);
+        assertEq(puppyRaffle.players(0), address(0));
+    }
 
     function testCantEnterWithoutPaying() public {
         address[] memory players = new address[](1);
@@ -66,11 +73,29 @@ contract PuppyRaffleTest is Test {
         puppyRaffle.enterRaffle{value: entranceFee * 2}(players);
     }
 
+
+    function testCantEnterWithDuplicatePlayersDiferentesCalls() public {
+        address[] memory players = new address[](2);
+        players[0] = address(0);
+        players[1] = playerOne;
+        // vm.expectRevert("PuppyRaffle: Duplicate player");
+        puppyRaffle.enterRaffle{value: entranceFee * 2}(players);
+
+
+
+        address[] memory playersTwo = new address[](2);
+        playersTwo[0] = playerThree;
+        playersTwo[1] = playerTwo;
+        // vm.expectRevert("PuppyRaffle: Duplicate player");
+        puppyRaffle.enterRaffle{value: entranceFee * 2}(playersTwo);
+    }
+
+
     function testCantEnterWithDuplicatePlayersMany() public {
         address[] memory players = new address[](3);
-        players[0] = playerOne;
+        players[0] = address(0);
         players[1] = playerTwo;
-        players[2] = playerOne;
+        players[2] = address(0);
         vm.expectRevert("PuppyRaffle: Duplicate player");
         puppyRaffle.enterRaffle{value: entranceFee * 3}(players);
     }
@@ -146,7 +171,7 @@ contract PuppyRaffleTest is Test {
         address[] memory players = new address[](3);
         players[0] = playerOne;
         players[1] = playerTwo;
-        players[2] = address(3);
+        players[2] = playerThree;
         puppyRaffle.enterRaffle{value: entranceFee * 3}(players);
 
         vm.warp(block.timestamp + duration + 1);
@@ -155,6 +180,56 @@ contract PuppyRaffleTest is Test {
         vm.expectRevert("PuppyRaffle: Need at least 4 players");
         puppyRaffle.selectWinner();
     }
+
+    function testIfRaffleContinuesIfEveryOneRefunds() public {
+        address[] memory players = new address[](4);
+        players[0] = playerOne;
+        players[1] = playerTwo;
+        players[2] = playerThree;
+        players[3] = playerFour;
+        puppyRaffle.enterRaffle{value: entranceFee * 4}(players);
+
+        vm.prank(playerOne);
+        puppyRaffle.refund(0);
+
+        vm.prank(playerTwo);
+        puppyRaffle.refund(1);
+        
+        vm.prank(playerThree);
+        puppyRaffle.refund(2);
+        
+        vm.prank(playerFour);
+        puppyRaffle.refund(3);
+        
+        
+        vm.warp(block.timestamp + duration + 1);
+        vm.roll(block.number + 1);
+
+        vm.expectRevert("PuppyRaffle: Need at least 4 players");
+        puppyRaffle.selectWinner();
+    }
+
+    function testIfRaffleContinuesIfOneRefunds() public {
+        address[] memory players = new address[](5);
+        players[0] = playerOne;
+        players[1] = playerTwo;
+        players[2] = playerThree;
+        players[3] = playerFour;
+        players[4] = address(5);
+        puppyRaffle.enterRaffle{value: entranceFee * 5}(players);
+
+        
+        vm.prank(playerFour);
+        puppyRaffle.refund(3);
+        
+        
+        vm.warp(block.timestamp + duration + 1);
+        vm.roll(block.number + 1);
+
+        // vm.expectRevert("PuppyRaffle: Need at least 4 players");
+        puppyRaffle.selectWinner();
+    }
+
 
     function testSelectWinner() public playersEntered {
         vm.warp(block.timestamp + duration + 1);
