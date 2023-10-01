@@ -5,7 +5,6 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {Base64} from "lib/base64/base64.sol";
-import {console} from "lib/forge-std/src/console.sol";
 
 /// @title PuppyRaffle
 /// @author PuppyLoveDAO
