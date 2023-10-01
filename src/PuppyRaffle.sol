@@ -54,7 +54,6 @@ contract PuppyRaffle is ERC721, Ownable {
 
     // Events
     event RaffleEnter(address[] newPlayers);
-    event RaffleWinner(address winner);
     event RaffleRefunded(address player);
     event FeeAddressChanged(address newFeeAddress);
 
@@ -202,9 +201,6 @@ contract PuppyRaffle is ERC721, Ownable {
         delete players;
         raffleStartTime = block.timestamp;
         previousWinner = winner;
-
-        emit RaffleWinner(winner);
-
         (bool success, ) = winner.call{value: prizePool}("");
         require(success, "PuppyRaffle: Failed to send prize pool to winner");
         _safeMint(winner, tokenId);
